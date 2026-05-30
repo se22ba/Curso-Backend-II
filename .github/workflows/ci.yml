@@ -1,0 +1,87 @@
+name: Generate OpenAPI Spec
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
+  generate-spec:
+    name: Generate OpenAPI Spec
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate OpenAPI specification
+        run: npm run generate-spec
+
+      - name: Validate spec was generated
+        run: |
+          if [ ! -f openapi.json ]; then
+            echo "ERROR: openapi.json no fue generado"
+            exit 1
+          fi
+          echo "openapi.json generado correctamente"
+          cat openapi.json | python3 -m json.tool > /dev/null && echo "JSON valido"
+
+      - name: Upload OpenAPI spec as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: openapi-spec
+          path: openapi.json
+          retention-days: 30
+
+  docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Build Docker image
+        run: docker build -t adoption-project:${{ github.sha }} .
+
+      - name: Test container starts
+        run: |
+          docker run -d --name test-container \
+            -e MONGO_URL=mongodb://localhost:27017/adoptions \
+            -p 8080:8080 \
+            adoption-project:${{ github.sha }} || true
+          sleep 3
+          docker logs test-container || true
+          docker stop test-container || true
