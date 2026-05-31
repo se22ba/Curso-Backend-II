@@ -1,4 +1,11 @@
+'use strict';
+
+const path = require('path');
 const swaggerJsdoc = require('swagger-jsdoc');
+
+// En Windows path.join usa backslashes, que swagger-jsdoc no entiende.
+// Forzamos forward slashes para que el glob funcione en cualquier OS.
+const routerPath = path.join(__dirname, '..', 'router', '*.js').replace(/\\/g, '/');
 
 const options = {
   definition: {
@@ -48,11 +55,7 @@ const options = {
             last_name: { type: 'string', example: 'Pérez' },
             email: { type: 'string', example: 'juan@example.com' },
             role: { type: 'string', enum: ['user', 'admin'], example: 'user' },
-            pets: {
-              type: 'array',
-              items: { type: 'string' },
-              example: []
-            }
+            pets: { type: 'array', items: { type: 'string' }, example: [] }
           }
         },
         UserInput: {
@@ -70,8 +73,8 @@ const options = {
           type: 'object',
           properties: {
             _id: { type: 'string', example: '64a1b2c3d4e5f6a7b8c9d0e3' },
-            owner: { $ref: '#/components/schemas/User' },
-            pet: { $ref: '#/components/schemas/Pet' },
+            owner: { '$ref': '#/components/schemas/User' },
+            pet: { '$ref': '#/components/schemas/Pet' },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' }
           }
@@ -93,7 +96,7 @@ const options = {
       }
     }
   },
-  apis: ['./src/router/*.js']
+  apis: [routerPath]
 };
 
 const swaggerSpec = swaggerJsdoc(options);
